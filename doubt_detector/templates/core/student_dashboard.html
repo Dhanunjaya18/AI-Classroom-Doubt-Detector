@@ -1,0 +1,295 @@
+{% extends 'core/base.html' %}
+{% block title %}Student Dashboard — ClassMind AI{% endblock %}
+{% block nav_student %}active{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <div>
+            <h1 class="page-title">Good day, {{ user.username }}! 👋</h1>
+            <p class="page-subtitle">Ask your doubts and discover what your peers are learning</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.75rem">
+            <div style="background:#ede9fe;color:#5b21b6;padding:0.5rem 1rem;border-radius:20px;font-size:0.8rem;font-weight:600">
+                <i class="fas fa-fire" style="color:#f59e0b;margin-right:0.3rem"></i>
+                {{ total_doubts }} Total Doubts
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stat Row -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#ede9fe"><i class="fas fa-question-circle" style="color:#7c3aed"></i></div>
+            <div class="stat-number">{{ my_count }}</div>
+            <div class="stat-label">My Doubts</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe"><i class="fas fa-users" style="color:#1d4ed8"></i></div>
+            <div class="stat-number">{{ total_doubts }}</div>
+            <div class="stat-label">Total Doubts</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#d1fae5"><i class="fas fa-thumbs-up" style="color:#065f46"></i></div>
+            <div class="stat-number" id="myVoteCount">{{ voted_ids|length }}</div>
+            <div class="stat-label">Doubts Upvoted</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7"><i class="fas fa-robot" style="color:#92400e"></i></div>
+            <div class="stat-number">AI</div>
+            <div class="stat-label">Powered</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Submit Doubt -->
+    <div class="col-lg-5" id="submit-section">
+        <div class="card h-100">
+            <div class="card-header-custom">
+                <div>
+                    <div class="card-title-sm"><i class="fas fa-plus-circle" style="color:#4f46e5;margin-right:0.5rem"></i>Submit a Doubt</div>
+                    <div style="font-size:0.75rem;color:#9ca3af;margin-top:0.2rem">AI will find similar questions instantly</div>
+                </div>
+            </div>
+            <div class="card-body-custom">
+                <div class="form-group mb-3">
+                    <label class="form-label">Subject <span style="color:#9ca3af;font-weight:400">(optional - AI will detect)</span></label>
+                    <select class="form-input" id="subjectSelect" style="padding-left:1rem">
+                        <option value="">Auto-detect subject</option>
+                        <option>Mathematics</option><option>Physics</option><option>Chemistry</option>
+                        <option>Computer Science</option><option>Biology</option><option>History</option>
+                        <option>Literature</option><option>Economics</option><option>General</option>
+                    </select>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Your Doubt</label>
+                    <textarea class="form-input" id="doubtText" rows="5" placeholder="Describe your doubt in detail... e.g., 'I don't understand how integration by parts works in calculus'"></textarea>
+                    <div style="font-size:0.72rem;color:#9ca3af;margin-top:0.35rem" id="charCount">0 / 10 min characters</div>
+                </div>
+                <button class="btn-primary-custom w-100" id="submitBtn" onclick="submitDoubt()">
+                    <i class="fas fa-paper-plane"></i> Submit Doubt
+                </button>
+                
+                <!-- Similar doubts panel -->
+                <div id="similarPanel" style="display:none;margin-top:1.25rem">
+                    <div style="font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.5rem">
+                        <i class="fas fa-search" style="color:#4f46e5"></i> Similar Doubts Found
+                    </div>
+                    <div id="similarList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Search + Feed -->
+    <div class="col-lg-7" id="feed-section">
+        <!-- Search -->
+        <div class="card mb-4">
+            <div class="card-body-custom">
+                <div style="display:flex;gap:0.75rem">
+                    <div style="position:relative;flex:1">
+                        <i class="fas fa-search" style="position:absolute;left:0.85rem;top:50%;transform:translateY(-50%);color:#9ca3af;font-size:0.875rem"></i>
+                        <input type="text" id="searchInput" class="form-input" placeholder="Search doubts semantically..." style="padding-left:2.5rem" oninput="debounceSearch()">
+                    </div>
+                    <button class="btn-secondary-custom" onclick="clearSearch()">Clear</button>
+                </div>
+                <div id="searchResults" style="display:none;margin-top:1rem"></div>
+            </div>
+        </div>
+        
+        <!-- Recent Doubts Feed -->
+        <div class="card">
+            <div class="card-header-custom">
+                <div class="card-title-sm"><i class="fas fa-stream" style="color:#4f46e5;margin-right:0.5rem"></i>Recent Doubts Feed</div>
+                <button class="btn-secondary-custom" onclick="loadFeed(1)" style="font-size:0.75rem;padding:0.4rem 0.75rem">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+            </div>
+            <div class="card-body-custom" style="padding-top:1rem">
+                <div id="feedContainer">
+                    {% for doubt in recent_doubts %}
+                    <div class="doubt-card" id="doubt-{{ doubt.id }}">
+                        <div class="doubt-text">{{ doubt.text }}</div>
+                        <div class="doubt-meta">
+                            <div style="width:26px;height:26px;border-radius:50%;background:{{ doubt.student.avatar_color }};display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700">{{ doubt.student.username|first|upper }}</div>
+                            <div class="doubt-author">{{ doubt.student.username }} · {{ doubt.timestamp|date:"M d" }}</div>
+                            <span class="subject-badge {% if doubt.subject == 'Mathematics' %}badge-math{% elif doubt.subject == 'Physics' %}badge-physics{% elif doubt.subject == 'Chemistry' %}badge-chemistry{% elif doubt.subject == 'Computer Science' %}badge-cs{% elif doubt.subject == 'Biology' %}badge-biology{% else %}badge-general{% endif %}">
+                                {{ doubt.subject|default:"General" }}
+                            </span>
+                            {% if doubt.cluster_label %}<span class="cluster-badge">{{ doubt.cluster_label|truncatechars:25 }}</span>{% endif %}
+                            <button class="upvote-btn {% if doubt.id in voted_ids %}voted{% endif %}" onclick="upvote({{ doubt.id }}, this)" id="upvote-{{ doubt.id }}">
+                                <i class="fas fa-chevron-up"></i> <span class="upvote-count">{{ doubt.upvotes }}</span>
+                            </button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div style="text-align:center;padding:2rem;color:#9ca3af">
+                        <i class="fas fa-inbox" style="font-size:2rem;margin-bottom:0.75rem;display:block;opacity:0.4"></i>
+                        No doubts yet. Be the first to ask!
+                    </div>
+                    {% endfor %}
+                </div>
+                <div id="loadMoreBtn" style="text-align:center;margin-top:1rem">
+                    <button class="btn-secondary-custom" onclick="loadMoreFeed()" id="loadMore" style="font-size:0.8rem">
+                        Load More
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let searchTimer;
+const VOTED_IDS = new Set({{ voted_ids|safe }});
+
+document.getElementById('doubtText').addEventListener('input', function() {
+    const len = this.value.length;
+    document.getElementById('charCount').textContent = `${len} characters ${len >= 10 ? '✓' : '(need ' + (10 - len) + ' more)'}`;
+});
+
+async function submitDoubt() {
+    const text = document.getElementById('doubtText').value.trim();
+    if (text.length < 10) { showToast('Please write at least 10 characters.', 'error'); return; }
+    
+    const btn = document.getElementById('submitBtn');
+    btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+    btn.disabled = true;
+    
+    const fd = new FormData();
+    fd.append('text', text);
+    fd.append('subject', document.getElementById('subjectSelect').value);
+    fd.append('csrfmiddlewaretoken', getCSRF());
+    
+    try {
+        const res = await fetch('/api/submit-doubt/', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToast('✨ Doubt submitted! Subject: ' + data.subject);
+            document.getElementById('doubtText').value = '';
+            document.getElementById('charCount').textContent = '0 / 10 min characters';
+            
+            if (data.similar && data.similar.length > 0) {
+                showSimilar(data.similar);
+            }
+            loadFeed(1);
+        } else {
+            showToast(data.message, 'error');
+        }
+    } catch(e) {
+        showToast('Error submitting doubt.', 'error');
+    }
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Doubt';
+    btn.disabled = false;
+}
+
+function showSimilar(similar) {
+    const panel = document.getElementById('similarPanel');
+    const list = document.getElementById('similarList');
+    list.innerHTML = similar.map(s => `
+        <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:0.875rem;margin-bottom:0.5rem">
+            <div style="font-size:0.82rem;color:#374151;margin-bottom:0.4rem;line-height:1.5">${s.text}...</div>
+            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">
+                <span style="font-size:0.7rem;color:#6b7280">by ${s.student}</span>
+                <span class="subject-badge badge-general">${s.subject || 'General'}</span>
+                <span style="margin-left:auto;font-size:0.7rem;background:#d1fae5;color:#065f46;padding:0.15rem 0.5rem;border-radius:20px;font-weight:600">${s.similarity}% match</span>
+            </div>
+        </div>
+    `).join('');
+    panel.style.display = 'block';
+}
+
+async function upvote(id, btn) {
+    const countEl = btn.querySelector('.upvote-count');
+    const res = await fetch(`/api/upvote/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCSRF() }
+    });
+    const data = await res.json();
+    countEl.textContent = data.upvotes;
+    if (data.status === 'added') { btn.classList.add('voted'); VOTED_IDS.add(id); }
+    else { btn.classList.remove('voted'); VOTED_IDS.delete(id); }
+}
+
+function debounceSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(searchDoubts, 400);
+}
+
+async function searchDoubts() {
+    const q = document.getElementById('searchInput').value.trim();
+    if (!q) { document.getElementById('searchResults').style.display = 'none'; return; }
+    const res = await fetch(`/api/search/?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const container = document.getElementById('searchResults');
+    if (data.results.length === 0) {
+        container.innerHTML = '<div style="color:#9ca3af;font-size:0.82rem;text-align:center;padding:1rem">No similar doubts found.</div>';
+    } else {
+        container.innerHTML = '<div style="font-size:0.8rem;font-weight:600;color:#374151;margin-bottom:0.75rem"><i class="fas fa-search" style="color:#4f46e5;margin-right:0.35rem"></i>' + data.results.length + ' results for "' + q + '"</div>' +
+            data.results.map(r => `
+                <div class="doubt-card">
+                    <div class="doubt-text" style="font-size:0.85rem">${r.text}</div>
+                    <div class="doubt-meta">
+                        <span class="doubt-author">${r.student} · ${r.time}</span>
+                        <span class="subject-badge badge-general">${r.subject}</span>
+                        <span style="margin-left:auto;font-size:0.7rem;background:#d1fae5;color:#065f46;padding:0.15rem 0.5rem;border-radius:20px;font-weight:600">${r.similarity}% match</span>
+                    </div>
+                </div>
+            `).join('');
+    }
+    container.style.display = 'block';
+}
+
+function clearSearch() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchResults').style.display = 'none';
+}
+
+async function loadFeed(page) {
+    const container = document.getElementById('feedContainer');
+    const res = await fetch(`/api/feed/?page=${page}`);
+    const data = await res.json();
+    
+    if (page === 1) container.innerHTML = '';
+    
+    if (data.doubts.length === 0 && page === 1) {
+        container.innerHTML = '<div style="text-align:center;padding:2rem;color:#9ca3af"><i class="fas fa-inbox" style="font-size:2rem;margin-bottom:0.75rem;display:block;opacity:0.4"></i>No doubts yet.</div>';
+        return;
+    }
+    
+    data.doubts.forEach(d => {
+        const voted = VOTED_IDS.has(d.id);
+        container.innerHTML += `
+            <div class="doubt-card" id="doubt-${d.id}">
+                <div class="doubt-text">${d.text}</div>
+                <div class="doubt-meta">
+                    <div style="width:26px;height:26px;border-radius:50%;background:${d.avatar_color};display:flex;align-items:center;justify-content:center;color:white;font-size:0.7rem;font-weight:700">${d.student[0].toUpperCase()}</div>
+                    <span class="doubt-author">${d.student} · ${d.time.split(' ')[0]} ${d.time.split(' ')[1]}</span>
+                    <span class="subject-badge ${subjectBadgeClass(d.subject)}">${d.subject}</span>
+                    ${d.cluster_label ? `<span class="cluster-badge">${d.cluster_label.substring(0,22)}${d.cluster_label.length>22?'...':''}</span>` : ''}
+                    <button class="upvote-btn ${voted?'voted':''}" onclick="upvote(${d.id}, this)">
+                        <i class="fas fa-chevron-up"></i> <span class="upvote-count">${d.upvotes}</span>
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    document.getElementById('loadMore').style.display = data.has_more ? 'inline-flex' : 'none';
+    currentPage = page;
+}
+
+function loadMoreFeed() { loadFeed(currentPage + 1); }
+</script>
+{% endblock %}

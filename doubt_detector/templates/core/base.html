@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ClassMind AI{% endblock %}</title>
+    {% load static %}
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #6366f1;
+            --primary-dark: #3730a3;
+            --secondary: #22C55E;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --bg: #F8FAFC;
+            --card: #FFFFFF;
+            --text: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --sidebar-w: 260px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+            --shadow-lg: 0 10px 25px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed; left: 0; top: 0; bottom: 0;
+            width: var(--sidebar-w); background: #1e1b4b;
+            display: flex; flex-direction: column; z-index: 100;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-brand {
+            padding: 1.5rem 1.25rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .brand-logo {
+            display: flex; align-items: center; gap: 0.75rem;
+            text-decoration: none;
+        }
+        .brand-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: white;
+        }
+        .brand-text { color: white; font-weight: 700; font-size: 1.1rem; line-height: 1.2; }
+        .brand-sub { color: rgba(255,255,255,0.45); font-size: 0.65rem; font-weight: 400; }
+        
+        .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
+        .nav-section-label {
+            color: rgba(255,255,255,0.3); font-size: 0.65rem; font-weight: 600;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            padding: 0.5rem 1.25rem; margin-top: 0.5rem;
+        }
+        .nav-link-item {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.65rem 1.25rem; color: rgba(255,255,255,0.6);
+            text-decoration: none; font-size: 0.875rem; font-weight: 500;
+            border-radius: 8px; margin: 0 0.5rem;
+            transition: all 0.2s;
+        }
+        .nav-link-item:hover, .nav-link-item.active {
+            background: rgba(99,102,241,0.2); color: white;
+        }
+        .nav-link-item.active { background: rgba(99,102,241,0.3); }
+        .nav-link-item i { width: 18px; text-align: center; font-size: 0.9rem; }
+        
+        .sidebar-footer {
+            padding: 1rem 1.25rem;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .user-card {
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .avatar {
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+        }
+        .user-info .user-name { color: white; font-size: 0.85rem; font-weight: 600; }
+        .user-info .user-role {
+            color: rgba(255,255,255,0.4); font-size: 0.7rem;
+            text-transform: capitalize;
+        }
+        .logout-btn {
+            margin-left: auto; color: rgba(255,255,255,0.4);
+            background: none; border: none; cursor: pointer;
+            padding: 0.25rem; font-size: 1rem; transition: color 0.2s;
+        }
+        .logout-btn:hover { color: #ef4444; }
+        
+        /* Main content */
+        .main-content {
+            margin-left: var(--sidebar-w); min-height: 100vh;
+            padding: 2rem; transition: margin 0.3s ease;
+        }
+        .page-header { margin-bottom: 2rem; }
+        .page-title { font-size: 1.6rem; font-weight: 700; color: var(--text); }
+        .page-subtitle { color: var(--text-muted); font-size: 0.875rem; margin-top: 0.25rem; }
+        
+        /* Cards */
+        .card { background: var(--card); border-radius: 16px; border: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+        .card-header-custom {
+            padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .card-title-sm { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+        .card-body-custom { padding: 1.5rem; }
+        
+        /* Stat cards */
+        .stat-card {
+            background: white; border-radius: 16px; padding: 1.5rem;
+            border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+        .stat-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem; margin-bottom: 1rem;
+        }
+        .stat-number { font-size: 2rem; font-weight: 700; color: var(--text); line-height: 1; }
+        .stat-label { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; margin-top: 0.25rem; }
+        .stat-change { font-size: 0.75rem; font-weight: 600; margin-top: 0.5rem; }
+        .stat-change.up { color: var(--secondary); }
+        
+        /* Badges */
+        .subject-badge {
+            display: inline-block; padding: 0.2rem 0.65rem;
+            border-radius: 20px; font-size: 0.7rem; font-weight: 600;
+        }
+        .badge-math { background: #ede9fe; color: #6d28d9; }
+        .badge-physics { background: #dbeafe; color: #1d4ed8; }
+        .badge-chemistry { background: #d1fae5; color: #065f46; }
+        .badge-cs { background: #fef3c7; color: #92400e; }
+        .badge-biology { background: #fce7f3; color: #9d174d; }
+        .badge-history { background: #fee2e2; color: #991b1b; }
+        .badge-general { background: #f1f5f9; color: #475569; }
+        
+        /* Buttons */
+        .btn-primary-custom {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white; border: none; padding: 0.6rem 1.25rem;
+            border-radius: 10px; font-weight: 600; font-size: 0.875rem;
+            cursor: pointer; transition: all 0.2s; display: inline-flex;
+            align-items: center; gap: 0.5rem;
+        }
+        .btn-primary-custom:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(79,70,229,0.35); }
+        .btn-secondary-custom {
+            background: #f1f5f9; color: var(--text); border: 1px solid var(--border);
+            padding: 0.6rem 1.25rem; border-radius: 10px; font-weight: 500;
+            font-size: 0.875rem; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-secondary-custom:hover { background: #e2e8f0; }
+        
+        /* Toast */
+        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; }
+        .toast-item {
+            background: white; border-radius: 12px; padding: 1rem 1.25rem;
+            box-shadow: var(--shadow-lg); border-left: 4px solid var(--secondary);
+            min-width: 280px; margin-bottom: 0.5rem;
+            animation: slideIn 0.3s ease;
+        }
+        .toast-item.error { border-left-color: var(--danger); }
+        @keyframes slideIn {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 1rem; }
+        }
+        
+        /* Doubt card */
+        .doubt-card {
+            background: white; border: 1px solid var(--border); border-radius: 14px;
+            padding: 1.25rem; margin-bottom: 0.75rem;
+            transition: box-shadow 0.2s, transform 0.2s;
+        }
+        .doubt-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+        .doubt-text { font-size: 0.9rem; color: var(--text); line-height: 1.6; margin-bottom: 0.75rem; }
+        .doubt-meta { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+        .doubt-author { font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; }
+        .upvote-btn {
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
+            padding: 0.3rem 0.75rem; font-size: 0.75rem; font-weight: 600;
+            color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 0.35rem; margin-left: auto;
+        }
+        .upvote-btn:hover, .upvote-btn.voted {
+            background: #ede9fe; color: var(--primary); border-color: var(--primary);
+        }
+        
+        /* Form */
+        .form-input {
+            width: 100%; padding: 0.75rem 1rem; border: 1.5px solid var(--border);
+            border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 0.875rem;
+            color: var(--text); background: #fafafa; transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none; resize: none;
+        }
+        .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,0.1); background: white; }
+        .form-label { font-size: 0.8rem; font-weight: 600; color: var(--text); margin-bottom: 0.4rem; display: block; }
+        
+        /* Spinner */
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Loading skeleton */
+        .skeleton { background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+        
+        /* Cluster badge */
+        .cluster-badge {
+            background: linear-gradient(135deg, #ede9fe, #ddd6fe);
+            color: #5b21b6; font-size: 0.68rem; font-weight: 600;
+            padding: 0.15rem 0.55rem; border-radius: 20px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if user.is_authenticated %}
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <a href="{% url 'dashboard' %}" class="brand-logo">
+                <div class="brand-icon"><i class="fas fa-brain"></i></div>
+                <div>
+                    <div class="brand-text">ClassMind</div>
+                    <div class="brand-sub">AI Doubt Detector</div>
+                </div>
+            </a>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section-label">Main</div>
+            {% if user.is_student %}
+            <a href="{% url 'student_dashboard' %}" class="nav-link-item {% block nav_student %}{% endblock %}">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            {% else %}
+            <a href="{% url 'teacher_dashboard' %}" class="nav-link-item {% block nav_teacher %}{% endblock %}">
+                <i class="fas fa-chart-line"></i> Analytics
+            </a>
+            {% endif %}
+            
+            <div class="nav-section-label">Features</div>
+            {% if user.is_student %}
+            <a href="#submit-section" class="nav-link-item" onclick="scrollToSection('submit-section')">
+                <i class="fas fa-plus-circle"></i> Submit Doubt
+            </a>
+            <a href="#feed-section" class="nav-link-item" onclick="scrollToSection('feed-section')">
+                <i class="fas fa-stream"></i> Doubts Feed
+            </a>
+            {% else %}
+            <a href="#doubts-section" class="nav-link-item" onclick="scrollToSection('doubts-section')">
+                <i class="fas fa-list"></i> All Doubts
+            </a>
+            <a href="#clusters-section" class="nav-link-item" onclick="scrollToSection('clusters-section')">
+                <i class="fas fa-project-diagram"></i> Clusters
+            </a>
+            {% endif %}
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-card">
+                <div class="avatar" style="background: {{ user.avatar_color }}">
+                    {{ user.username|first|upper }}
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ user.username }}</div>
+                    <div class="user-role">{{ user.role }}</div>
+                </div>
+                <form method="POST" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
+    {% endif %}
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showToast(msg, type='success') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast-item ${type === 'error' ? 'error' : ''}`;
+            t.innerHTML = `<div style="font-size:0.85rem;font-weight:600;color:var(--text)">${msg}</div>`;
+            c.appendChild(t);
+            setTimeout(() => { t.style.animation = 'slideIn 0.3s ease reverse'; setTimeout(() => t.remove(), 300); }, 3500);
+        }
+        function scrollToSection(id) {
+            const el = document.getElementById(id);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }
+        function getCSRF() {
+            return document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+        }
+        function subjectBadgeClass(subject) {
+            const map = {
+                'Mathematics': 'badge-math', 'Physics': 'badge-physics',
+                'Chemistry': 'badge-chemistry', 'Computer Science': 'badge-cs',
+                'Biology': 'badge-biology', 'History': 'badge-history'
+            };
+            return map[subject] || 'badge-general';
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

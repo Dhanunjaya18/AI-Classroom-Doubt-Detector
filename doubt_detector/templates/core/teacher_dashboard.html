@@ -1,0 +1,301 @@
+{% extends 'core/base.html' %}
+{% block title %}Teacher Analytics — ClassMind AI{% endblock %}
+{% block nav_teacher %}active{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+        <div>
+            <h1 class="page-title">Analytics Dashboard 📊</h1>
+            <p class="page-subtitle">Real-time insights into student doubts and learning patterns</p>
+        </div>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+            {% if trending_topics %}
+            <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:1px solid #fcd34d;padding:0.5rem 1rem;border-radius:20px;font-size:0.78rem;font-weight:600;color:#92400e">
+                <i class="fas fa-fire" style="color:#f59e0b;margin-right:0.35rem"></i>
+                Trending: {{ trending_topics.0.0 }}
+            </div>
+            {% endif %}
+            <button class="btn-primary-custom" onclick="runClustering()" id="clusterBtn">
+                <i class="fas fa-project-diagram"></i> Re-run Clustering
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#ede9fe"><i class="fas fa-question-circle" style="color:#7c3aed"></i></div>
+            <div class="stat-number">{{ total_doubts }}</div>
+            <div class="stat-label">Total Doubts</div>
+            <div class="stat-change up"><i class="fas fa-arrow-up"></i> {{ doubts_today }} today</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#dbeafe"><i class="fas fa-users" style="color:#1d4ed8"></i></div>
+            <div class="stat-number">{{ total_students }}</div>
+            <div class="stat-label">Students</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#d1fae5"><i class="fas fa-project-diagram" style="color:#065f46"></i></div>
+            <div class="stat-number">{{ clustered_doubts }}</div>
+            <div class="stat-label">Clustered Doubts</div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="stat-card">
+            <div class="stat-icon" style="background:#fef3c7"><i class="fas fa-fire" style="color:#92400e"></i></div>
+            <div class="stat-number">{{ doubts_today }}</div>
+            <div class="stat-label">Doubts Today</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 1 -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header-custom">
+                <div class="card-title-sm"><i class="fas fa-chart-line" style="color:#4f46e5;margin-right:0.5rem"></i>Doubt Activity (Last 7 Days)</div>
+            </div>
+            <div class="card-body-custom">
+                <canvas id="timelineChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header-custom">
+                <div class="card-title-sm"><i class="fas fa-chart-pie" style="color:#4f46e5;margin-right:0.5rem"></i>Subject Distribution</div>
+            </div>
+            <div class="card-body-custom">
+                <canvas id="subjectChart" height="160"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row 2 -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card" id="clusters-section">
+            <div class="card-header-custom">
+                <div class="card-title-sm"><i class="fas fa-project-diagram" style="color:#4f46e5;margin-right:0.5rem"></i>Cluster Distribution</div>
+                <span style="font-size:0.72rem;background:#ede9fe;color:#5b21b6;padding:0.2rem 0.6rem;border-radius:20px;font-weight:600">K-Means AI</span>
+            </div>
+            <div class="card-body-custom">
+                <canvas id="clusterChart" height="120"></canvas>
+                <div id="clusterEmpty" style="display:none;text-align:center;padding:2rem;color:#9ca3af">
+                    <i class="fas fa-project-diagram" style="font-size:2rem;opacity:0.3;margin-bottom:0.5rem;display:block"></i>
+                    Run clustering to see topic groups
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header-custom">
+                <div class="card-title-sm"><i class="fas fa-trophy" style="color:#f59e0b;margin-right:0.5rem"></i>Most Upvoted Doubts</div>
+            </div>
+            <div class="card-body-custom" style="padding-top:1rem">
+                {% for doubt in top_doubts %}
+                <div class="doubt-card" style="margin-bottom:0.65rem">
+                    <div style="font-size:0.85rem;color:#374151;line-height:1.5;margin-bottom:0.5rem">{{ doubt.text|truncatechars:120 }}</div>
+                    <div class="doubt-meta">
+                        <span class="doubt-author"><i class="fas fa-user" style="font-size:0.65rem"></i> {{ doubt.student.username }}</span>
+                        <span class="subject-badge {% if doubt.subject == 'Mathematics' %}badge-math{% elif doubt.subject == 'Physics' %}badge-physics{% elif doubt.subject == 'Chemistry' %}badge-chemistry{% elif doubt.subject == 'Computer Science' %}badge-cs{% else %}badge-general{% endif %}">{{ doubt.subject|default:"General" }}</span>
+                        <span style="margin-left:auto;display:flex;align-items:center;gap:0.3rem;font-size:0.75rem;font-weight:700;color:#4f46e5">
+                            <i class="fas fa-chevron-up"></i> {{ doubt.upvotes }}
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="text-align:center;padding:2rem;color:#9ca3af;font-size:0.85rem">No doubts yet</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- All Doubts Table -->
+<div class="card" id="doubts-section">
+    <div class="card-header-custom">
+        <div class="card-title-sm"><i class="fas fa-list" style="color:#4f46e5;margin-right:0.5rem"></i>All Doubts</div>
+        <div style="display:flex;gap:0.5rem">
+            <input type="text" id="filterSubject" class="form-input" placeholder="Filter by subject..." style="width:180px;padding:0.4rem 0.75rem;font-size:0.8rem" oninput="debounceFilter()">
+            <button class="btn-secondary-custom" onclick="loadAllDoubts()" style="font-size:0.75rem;padding:0.4rem 0.75rem"><i class="fas fa-sync-alt"></i></button>
+        </div>
+    </div>
+    <div class="card-body-custom" style="padding:0">
+        <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse">
+                <thead>
+                    <tr style="border-bottom:1px solid #e5e7eb;background:#f9fafb">
+                        <th style="padding:0.875rem 1.25rem;text-align:left;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Doubt</th>
+                        <th style="padding:0.875rem 1rem;text-align:left;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Student</th>
+                        <th style="padding:0.875rem 1rem;text-align:left;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Subject</th>
+                        <th style="padding:0.875rem 1rem;text-align:left;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Cluster</th>
+                        <th style="padding:0.875rem 1rem;text-align:center;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Votes</th>
+                        <th style="padding:0.875rem 1rem;text-align:left;font-size:0.75rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:0.05em">Time</th>
+                    </tr>
+                </thead>
+                <tbody id="doubtsTable">
+                    {% for doubt in recent_doubts %}
+                    <tr style="border-bottom:1px solid #f3f4f6;transition:background 0.15s" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+                        <td style="padding:1rem 1.25rem;font-size:0.84rem;color:#1f2937;max-width:320px">
+                            <div style="line-height:1.5">{{ doubt.text|truncatechars:100 }}</div>
+                        </td>
+                        <td style="padding:1rem;font-size:0.82rem;color:#6b7280;white-space:nowrap">
+                            <div style="display:flex;align-items:center;gap:0.5rem">
+                                <div style="width:24px;height:24px;border-radius:50%;background:{{ doubt.student.avatar_color }};display:flex;align-items:center;justify-content:center;color:white;font-size:0.65rem;font-weight:700">{{ doubt.student.username|first|upper }}</div>
+                                {{ doubt.student.username }}
+                            </div>
+                        </td>
+                        <td style="padding:1rem;white-space:nowrap">
+                            <span class="subject-badge {% if doubt.subject == 'Mathematics' %}badge-math{% elif doubt.subject == 'Physics' %}badge-physics{% elif doubt.subject == 'Chemistry' %}badge-chemistry{% elif doubt.subject == 'Computer Science' %}badge-cs{% elif doubt.subject == 'Biology' %}badge-biology{% else %}badge-general{% endif %}">
+                                {{ doubt.subject|default:"General" }}
+                            </span>
+                        </td>
+                        <td style="padding:1rem">
+                            {% if doubt.cluster_label %}
+                            <span class="cluster-badge">{{ doubt.cluster_label|truncatechars:28 }}</span>
+                            {% else %}
+                            <span style="color:#9ca3af;font-size:0.75rem">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding:1rem;text-align:center;font-size:0.82rem;font-weight:600;color:#4f46e5">{{ doubt.upvotes }}</td>
+                        <td style="padding:1rem;font-size:0.75rem;color:#9ca3af;white-space:nowrap">{{ doubt.timestamp|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" style="text-align:center;padding:3rem;color:#9ca3af">No doubts submitted yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const subjectData = {{ subject_data_json|safe }};
+const clusterData = {{ cluster_data_json|safe }};
+const timelineData = {{ timeline_json|safe }};
+
+const COLORS = ['#4f46e5','#7c3aed','#2563eb','#0891b2','#059669','#d97706','#dc2626','#db2777','#0d9488','#7c3aed'];
+
+// Timeline Chart
+const tCtx = document.getElementById('timelineChart').getContext('2d');
+new Chart(tCtx, {
+    type: 'line',
+    data: {
+        labels: timelineData.map(d => d.date.split('-').slice(1).join('/')),
+        datasets: [{
+            label: 'Doubts',
+            data: timelineData.map(d => d.count),
+            borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.08)',
+            borderWidth: 2.5, pointBackgroundColor: '#4f46e5', pointRadius: 5,
+            tension: 0.4, fill: true,
+        }]
+    },
+    options: {
+        responsive: true, plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Poppins', size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+            x: { ticks: { font: { family: 'Poppins', size: 11 } }, grid: { display: false } }
+        }
+    }
+});
+
+// Subject Chart
+const sCtx = document.getElementById('subjectChart').getContext('2d');
+const subjectLabels = Object.keys(subjectData);
+new Chart(sCtx, {
+    type: 'doughnut',
+    data: {
+        labels: subjectLabels,
+        datasets: [{ data: Object.values(subjectData), backgroundColor: COLORS.slice(0, subjectLabels.length), borderWidth: 2, borderColor: '#fff' }]
+    },
+    options: {
+        responsive: true, cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { font: { family: 'Poppins', size: 10 }, padding: 12 } } }
+    }
+});
+
+// Cluster Chart
+const clusterLabels = Object.keys(clusterData);
+if (clusterLabels.length > 0) {
+    const cCtx = document.getElementById('clusterChart').getContext('2d');
+    new Chart(cCtx, {
+        type: 'bar',
+        data: {
+            labels: clusterLabels.map(l => l.length > 20 ? l.substring(0,20) + '...' : l),
+            datasets: [{ label: 'Doubts', data: Object.values(clusterData), backgroundColor: COLORS.slice(0, clusterLabels.length), borderRadius: 8, borderSkipped: false }]
+        },
+        options: {
+            responsive: true, indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { beginAtZero: true, ticks: { stepSize: 1, font: { family: 'Poppins', size: 11 } }, grid: { color: 'rgba(0,0,0,0.04)' } },
+                y: { ticks: { font: { family: 'Poppins', size: 10 } }, grid: { display: false } }
+            }
+        }
+    });
+} else {
+    document.getElementById('clusterEmpty').style.display = 'block';
+}
+
+async function runClustering() {
+    const btn = document.getElementById('clusterBtn');
+    btn.innerHTML = '<span class="spinner"></span> Clustering...';
+    btn.disabled = true;
+    try {
+        const res = await fetch('/api/cluster/');
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToast(`✨ Clustering complete! ${data.n_clusters} clusters found. Silhouette: ${data.silhouette_score}`);
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            showToast(data.message || 'Clustering failed', 'error');
+        }
+    } catch(e) {
+        showToast('Error running clustering', 'error');
+    }
+    btn.innerHTML = '<i class="fas fa-project-diagram"></i> Re-run Clustering';
+    btn.disabled = false;
+}
+
+let filterTimer;
+function debounceFilter() { clearTimeout(filterTimer); filterTimer = setTimeout(loadAllDoubts, 400); }
+
+async function loadAllDoubts() {
+    const subject = document.getElementById('filterSubject').value;
+    const res = await fetch(`/api/all-doubts/?subject=${encodeURIComponent(subject)}`);
+    const data = await res.json();
+    const tbody = document.getElementById('doubtsTable');
+    if (data.doubts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:3rem;color:#9ca3af">No doubts found.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.doubts.map(d => `
+        <tr style="border-bottom:1px solid #f3f4f6;transition:background 0.15s" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+            <td style="padding:1rem 1.25rem;font-size:0.84rem;color:#1f2937;max-width:320px"><div style="line-height:1.5">${d.text.substring(0,100)}${d.text.length>100?'...':''}</div></td>
+            <td style="padding:1rem;font-size:0.82rem;color:#6b7280;white-space:nowrap">${d.student}</td>
+            <td style="padding:1rem;white-space:nowrap"><span class="subject-badge ${subjectBadgeClass(d.subject)}">${d.subject}</span></td>
+            <td style="padding:1rem"><span class="cluster-badge">${d.cluster.substring(0,28)}${d.cluster.length>28?'...':''}</span></td>
+            <td style="padding:1rem;text-align:center;font-size:0.82rem;font-weight:600;color:#4f46e5">${d.upvotes}</td>
+            <td style="padding:1rem;font-size:0.75rem;color:#9ca3af;white-space:nowrap">${d.time}</td>
+        </tr>
+    `).join('');
+}
+</script>
+{% endblock %}

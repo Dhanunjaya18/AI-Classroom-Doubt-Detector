@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up — ClassMind AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Poppins', sans-serif; background: #0f0e1a; min-height: 100vh; display: flex; }
+        .auth-left { flex: 1; background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 3rem; position: relative; overflow: hidden; }
+        .auth-left::before { content: ''; position: absolute; width: 400px; height: 400px; background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%); top: -100px; right: -100px; border-radius: 50%; }
+        .hero-content { position: relative; z-index: 1; text-align: center; color: white; }
+        .hero-icon { width: 80px; height: 80px; border-radius: 20px; background: linear-gradient(135deg, #6366f1, #8b5cf6); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 2rem; box-shadow: 0 20px 40px rgba(99,102,241,0.4); }
+        .hero-title { font-size: 2.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+        .hero-title span { background: linear-gradient(135deg, #a5b4fc, #c4b5fd); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-desc { color: rgba(255,255,255,0.6); font-size: 1rem; max-width: 320px; line-height: 1.7; }
+        .auth-right { width: 480px; background: #fafafa; display: flex; align-items: center; justify-content: center; padding: 3rem; }
+        .auth-form-wrapper { width: 100%; max-width: 360px; }
+        .form-title { font-size: 1.8rem; font-weight: 700; color: #1f2937; margin-bottom: 0.5rem; }
+        .form-subtitle { color: #6b7280; font-size: 0.875rem; margin-bottom: 2rem; }
+        .form-group { margin-bottom: 1.1rem; }
+        .form-label { font-size: 0.8rem; font-weight: 600; color: #374151; margin-bottom: 0.4rem; display: block; }
+        .form-input { width: 100%; padding: 0.8rem 1rem 0.8rem 2.75rem; border: 1.5px solid #e5e7eb; border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 0.875rem; color: #1f2937; background: white; transition: all 0.2s; outline: none; }
+        .form-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.1); }
+        .input-wrapper { position: relative; }
+        .input-icon { position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 0.875rem; }
+        .role-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .role-option { position: relative; }
+        .role-option input { display: none; }
+        .role-label {
+            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+            padding: 1rem; border: 2px solid #e5e7eb; border-radius: 12px;
+            cursor: pointer; transition: all 0.2s; text-align: center;
+            background: white;
+        }
+        .role-label:hover { border-color: #6366f1; }
+        .role-option input:checked + .role-label { border-color: #4f46e5; background: #ede9fe; }
+        .role-icon { font-size: 1.5rem; }
+        .role-name { font-size: 0.85rem; font-weight: 600; color: #374151; }
+        .role-desc { font-size: 0.7rem; color: #9ca3af; }
+        .btn-submit { width: 100%; padding: 0.875rem; background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; border: none; border-radius: 10px; font-family: 'Poppins', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 0.75rem; }
+        .btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(79,70,229,0.35); }
+        .link-text { text-align: center; font-size: 0.85rem; color: #6b7280; margin-top: 1.25rem; }
+        .link-text a { color: #4f46e5; font-weight: 600; text-decoration: none; }
+        .alert-error { background: #fee2e2; border: 1px solid #fecaca; border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.8rem; color: #991b1b; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+        @media (max-width: 768px) { .auth-left { display: none; } .auth-right { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="auth-left">
+        <div class="hero-content">
+            <div class="hero-icon"><i class="fas fa-graduation-cap"></i></div>
+            <div class="hero-title">Join<br><span>ClassMind AI</span></div>
+            <p class="hero-desc">Create your account and start experiencing AI-powered learning support today.</p>
+        </div>
+    </div>
+    <div class="auth-right">
+        <div class="auth-form-wrapper">
+            <div class="form-title">Create Account</div>
+            <div class="form-subtitle">Fill in your details to get started.</div>
+            {% if messages %}{% for message in messages %}
+            <div class="alert-error"><i class="fas fa-exclamation-circle"></i> {{ message }}</div>
+            {% endfor %}{% endif %}
+            <form method="POST">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label class="form-label">Username</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-user input-icon"></i>
+                        <input type="text" name="username" class="form-input" placeholder="Choose a username" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email (optional)</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" name="email" class="form-input" placeholder="your@email.com">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div class="input-wrapper">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" name="password" class="form-input" placeholder="Create a password" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">I am a...</label>
+                    <div class="role-selector">
+                        <div class="role-option">
+                            <input type="radio" name="role" id="role_student" value="student" checked>
+                            <label for="role_student" class="role-label">
+                                <span class="role-icon">🎓</span>
+                                <span class="role-name">Student</span>
+                                <span class="role-desc">Submit & explore doubts</span>
+                            </label>
+                        </div>
+                        <div class="role-option">
+                            <input type="radio" name="role" id="role_teacher" value="teacher">
+                            <label for="role_teacher" class="role-label">
+                                <span class="role-icon">👩‍🏫</span>
+                                <span class="role-name">Teacher</span>
+                                <span class="role-desc">View analytics & insights</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-submit">Create Account</button>
+            </form>
+            <div class="link-text">Already have an account? <a href="/login/">Sign in</a></div>
+        </div>
+    </div>
+</body>
+</html>
